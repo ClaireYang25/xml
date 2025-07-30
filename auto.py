@@ -1,10 +1,9 @@
-
 import os 
 import pandas as pd
 from lxml import etree
 from collections import defaultdict
 
-# 这里改成你的目录，Windows路径推荐用 r'' 或正斜杠 /
+# Change this to your directory. For Windows paths, it is recommended to use \r\ or forward slashes.
 xml_dir = r'C:/Users/ADMYANGDA/Desktop/XMLautomate/Input - MAY2025'
 result = []
 
@@ -27,7 +26,7 @@ for filename in os.listdir(xml_dir):
         tree = etree.parse(file_path)
         root = tree.getroot()
     except Exception as e:
-        print(f"解析文件 {filename} 失败: {e}")
+        print(f"Parsing files {filename} failed: {e}")
         continue
 
     if device_type == 'ALFO80HDX':
@@ -42,7 +41,7 @@ for filename in os.listdir(xml_dir):
                     if 'TRX' in desc and 'HQoS (4 sch. X 8 queues)' in oper:
                         hqos_count += 1
             result.append({
-                '设备类型': device_type,
+                'Typ.Device': device_type,
                 'NE ID': ne_id,
                 'HQOS': hqos_count
             })
@@ -54,11 +53,11 @@ for filename in os.listdir(xml_dir):
 
             # HQoS
             count = 0
-            for qos in ne.findall('.//QOS_PortSchema'):
+            for qos in ne.findall('.//QOS_PortSchemaSettings'):
                 desc = qos.findtext('QOS_PortSchemaDesc', default='')
                 oper = qos.findtext('QOS_PortSchemaOper', default='')
-                if 'ODU' in desc and 'HQoS (4 sch. X 8 queues)' in oper:
-                    count += 1
+                if oper == 'HQoS (4 sch. X 8 queues)' and ('RLAG' in desc or 'ODU' in desc):
+                     count += 1
             feature_count['HQoS'] = count
 
             # 1024QAM / 2048QAM
@@ -97,7 +96,7 @@ for filename in os.listdir(xml_dir):
             feature_count['112MHz'] = count
 
             result.append({
-                '设备类型': device_type,
+                'Typ.Device': device_type,
                 'NE ID': ne_id,
                 **feature_count
             })
@@ -110,13 +109,13 @@ for filename in os.listdir(xml_dir):
             # HQoS
             hqos_count = 0
             for qos in ne.findall('.//QOS_PortSchemaSettings'):
-                desc = qos.findtext('QOS_PortSchemaDesc', '').strip().lower()
-                oper = qos.findtext('QOS_PortSchemaOper', '').strip().lower()
-                if 'hqoS'.lower() in oper and 'odu' in desc:
+                desc = (qos.findtext('QOS_PortSchemaDesc') or '').strip()
+                oper = (qos.findtext('QOS_PortSchemaOper') or '').strip()
+                if 'HQoS (4 sch. X 8 queues)' in oper and 'ODU' in desc:
                    hqos_count += 1
 
             feature_count['HQoS'] = hqos_count
-
+            # print(f"NE: {ne_id}, desc: {desc}, oper: {oper}")
             # 1024QAM / 2048QAM
             count = 0
             for up in ne.findall('.//UpperProfile'):
@@ -125,27 +124,27 @@ for filename in os.listdir(xml_dir):
             feature_count['1024QAM/2048QAM'] = count
 
             result.append({
-                '设备类型': device_type,
+                'Typ.Device': device_type,
                 'NE ID': ne_id,
                 **feature_count
             })
 
 if result:
     df = pd.DataFrame(result)
-    df.to_excel('设备feature统计明细.xlsx', index=False)
-    print('统计完成，已导出明细表：设备feature统计明细.xlsx')
+    df.to_excel('Device feature statistics details.xlsx', index=False)
+    print('Statistics completed, detailed table exported: Device feature statistics details.xlsx')
 else:
-    print('未找到有效数据，未导出Excel')
+    print('No valid data found, no Excel export')
 
 if result:
-    df = pd.read_excel('设备feature统计明细.xlsx')
-    device_types = df['设备类型'].unique()
+    df = pd.read_excel('Device feature statistics details.xlsx')
+    device_types = df['Typ.Device'].unique()
     summary_blocks = []
     for device in device_types:
-        sub = df[df['设备类型'] == device]
+        sub = df[df['Typ.Device'] == device]
         ne_count = sub['NE ID'].nunique()
         block = [[device, ne_count]]
-        feature_cols = [col for col in sub.columns if col not in ['设备类型', 'NE ID']]
+        feature_cols = [col for col in sub.columns if col not in ['Typ.Device', 'NE ID']]
         for feat in feature_cols:
             block.append([feat, sub[feat].sum()])
         summary_blocks.append(block)
@@ -153,7 +152,8 @@ if result:
     summary_rows = []
     for block in summary_blocks:
         summary_rows.extend(block)
-        summary_rows.append(['', ''])  # 空行分隔
+        summary_rows.append(['', ''])  # 
     summary_df = pd.DataFrame(summary_rows, columns=['', ''])
-    summary_df.to_excel('设备feature统计总表.xlsx', index=False, header=False)
-    print('已导出汇总统计表：设备feature统计总表.xlsx')
+    summary_df.to_excel('Equipment feature statistics summary table.xlsx', index=False, header=False)
+    print('Exported summary statistics table: Equipment feature statistics summary table.xlsx')
+
