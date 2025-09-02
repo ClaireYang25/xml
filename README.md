@@ -93,7 +93,3 @@ python device_feature_analysis.py
 ## License
 
 This project is released under the MIT License.
-
----
-
-要不要我帮你把 README 再加上一个 **流程图（逻辑图，用 Mermaid 画的）**，这样别人一看 repo 就能直观理解运行过程？
